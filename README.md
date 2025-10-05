@@ -1,13 +1,13 @@
 # 🪐 Hunting for Exoplanets with AI  
 *A NASA Space Apps Challenge 2025 Project*
 
-![NASA Space Apps](https://www.spaceappschallenge.org/_next/static/media/spaceapps-logo.0c88c7a5.svg)
+![NASA Space Apps](hhttps://www.spaceappschallenge.org)
 
 ## 🌌 Overview
 **Hunting for Exoplanets with AI** is a machine learning project that automatically analyzes NASA’s open-source **Kepler, K2, and TESS** datasets to identify potential exoplanets.  
 By analyzing stellar brightness variations (light curves), the model detects periodic dimming patterns that indicate exoplanet transits.
 
-Developed for the [NASA International Space Apps Challenge 2025](https://www.spaceappschallenge.org/):  
+Developed for the [NASA International Space Apps Challenge 2025](https://www.spaceappschallenge.org/2025/challenges/a-world-away-hunting-for-exoplanets-with-ai/):  
 👉 *A World Away: Hunting for Exoplanets with AI*
 
 ---
@@ -39,10 +39,6 @@ When a planet passes in front of its host star (transit), the observed brightnes
    - Duration Proxy (number of consecutive low flux points)  
    - Autocorrelation lag-1 (signal periodicity)
 4. **Labeling** — Combine known exoplanet signals and artificial noise for supervised training  
-
-### 🪐 Visualization Example
-![Light Curve Example](https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Kepler_Lightcurve.png/800px-Kepler_Lightcurve.png)
-*Kepler light curve showing periodic dimming from an exoplanet transit.*
 
 ---
 
