@@ -46,9 +46,7 @@ def guess_flux_column(df):
     for c in candidates:
         if c in df.columns:
             return c
-    # fallback: numeric column except time-like
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    # prefer any numeric column not named time
     for c in numeric_cols:
         if 'time' not in c.lower():
             return c
@@ -65,7 +63,6 @@ def load_artifacts():
     if not os.path.exists(ARTIFACT_DIR):
         st.warning(f"Artifact folder not found: {ARTIFACT_DIR}. Models will be unavailable.")
         return
-    # try common names used in notebook
     candidates = {
         "rf": os.path.join(ARTIFACT_DIR, "model_rf.joblib"),
         "logreg": os.path.join(ARTIFACT_DIR, "model_logreg.joblib"),
@@ -106,12 +103,11 @@ with col2:
     st.markdown("""
     - CSV should contain a time column (e.g., `time`, `bjd`, `t`) and a flux column (e.g., `flux`, `PDCSAP_FLUX`).  
     - Alternatively, use 'Fetch by name' (requires `lightkurve` and internet).  
-    - If no models exist, app will still compute features from uploaded data.
     """)
 
 with col1:
     uploaded = st.file_uploader("Upload light curve CSV", type=["csv"])
-    fetch_host = st.text_input("Fetch by target name (optional, e.g., TIC 25155310 or a star name)", value="")
+    fetch_host = st.text_input("Fetch by target name (e.g., TIC 25155310 or a star name)", value="")
     use_fetch = st.button("Fetch light curve (requires internet & lightkurve)") if HAS_LIGHTKURVE else None
 
 df = None
@@ -129,7 +125,6 @@ elif fetch_host and HAS_LIGHTKURVE and use_fetch:
             st.warning("No lightcurve found for that target via lightkurve.")
         else:
             lcfile = search.download()
-            # try common flux attributes
             if hasattr(lcfile, "PDCSAP_FLUX"):
                 lc = lcfile.PDCSAP_FLUX
             elif hasattr(lcfile, "SAP_FLUX"):
@@ -148,11 +143,9 @@ elif fetch_host and HAS_LIGHTKURVE and use_fetch:
     except Exception as e:
         st.error(f"lightkurve fetch failed: {e}")
 elif not uploaded and not fetch_host:
-    # Offer a synthetic example for demo
     if st.checkbox("Use synthetic demo light curve (example)"):
         t = np.linspace(0, 30, 3000)
         flux = np.ones_like(t) + np.random.normal(0, 0.0008, size=t.shape)
-        # inject a fake transit at t~10 with depth 0.01
         mask = (t > 9.95) & (t < 10.05)
         flux[mask] -= 0.01
         df = pd.DataFrame({'time': t, 'flux': flux})
@@ -167,14 +160,12 @@ if df is not None:
     if 'time' in df.columns:
         time_col_guess = 'time'
     else:
-        # try to find any time-like column
         for c in df.columns:
             if 'time' in c.lower() or 'bjd' in c.lower() or 't' == c.lower():
                 time_col_guess = c
                 break
     time_col_user = st.text_input("Time column (optional)", value=time_col_guess if time_col_guess else "")
 
-    # plot raw light curve
     try:
         flux_series = df[flux_col_user].astype(float).values
         time_series = df[time_col_user].astype(float).values if time_col_user and time_col_user in df.columns else np.arange(len(flux_series))
@@ -187,10 +178,9 @@ if df is not None:
     except Exception as e:
         st.warning(f"Could not plot light curve preview: {e}")
 
-    # Allow user to select a segment to analyze (start/end idx)
     st.markdown("### Select a segment to analyze")
     n_points = len(df)
-    c1, c2 = st.columns(3)
+    c1, c2 = st.columns(2)
     with c1:
         seg_start = st.number_input("Segment start index", min_value=0, max_value=max(0,n_points-1), value=0, step=1)
     with c2:
@@ -198,7 +188,6 @@ if df is not None:
     seg_end = max(seg_end, seg_start+1)
 
     if st.button("Extract features & Predict"):
-        # extract selected segment
         try:
             seg_flux = df[flux_col_user].astype(float).values[seg_start:seg_end+1]
         except Exception as e:
@@ -214,11 +203,7 @@ if df is not None:
                 feats_df = pd.DataFrame([feats])
                 st.table(feats_df.T.rename(columns={0:'value'}))
 
-                # Prepare features for models
                 X = feats_df.copy()
-                # ensure column order consistent with scaler/model training: try to load column order from scaler if possible
-                # We'll use X.columns order; scaler expects same feature order used in training.
-                # If scaler exists, transform; else use raw.
                 if scaler is not None:
                     try:
                         X_scaled = scaler.transform(X)
@@ -228,7 +213,6 @@ if df is not None:
                 else:
                     X_scaled = None
 
-                # Predict with available models
                 if not models:
                     st.warning("No models found in artifacts. Only features are shown.")
                 else:
@@ -237,7 +221,6 @@ if df is not None:
                             if X_scaled is not None and name in ('logreg','xgb'):
                                 inp = X_scaled
                             elif X_scaled is not None and name not in ('logreg','xgb'):
-                                # random forest was trained on raw features in notebook; try raw X
                                 inp = X.values
                             else:
                                 inp = X.values
@@ -250,7 +233,6 @@ if df is not None:
                         except Exception as e:
                             st.error(f"Prediction failed for model {name}: {e}")
 
-                # plot the selected segment and highlight
                 fig2, ax2 = plt.subplots(figsize=(10,3))
                 seg_time = df[time_col_user].astype(float).values[seg_start:seg_end+1] if time_col_user and time_col_user in df.columns else np.arange(len(seg_flux))
                 ax2.plot(seg_time, seg_flux, lw=0.8)
@@ -260,5 +242,4 @@ if df is not None:
                 st.pyplot(fig2)
 
 st.markdown("---")
-st.markdown("If you want, place `main_ready.ipynb` and artifacts (models + scaler) together with this app. If models are missing you can still use the app to compute features.")
 st.markdown("Developed by NOVA-5")
